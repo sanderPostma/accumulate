@@ -35,6 +35,8 @@ type EndBlockRequest struct{}
 type Chain interface {
 	Query(*apiQuery.Query) (k, v []byte, err *protocol.Error)
 
+	InitChain(state []byte) error
+
 	BeginBlock(BeginBlockRequest)
 	CheckTx(*transactions.GenTransaction) *protocol.Error
 	DeliverTx(*transactions.GenTransaction) (*protocol.TxResult, *protocol.Error)
@@ -43,6 +45,9 @@ type Chain interface {
 }
 
 type State interface {
+	// ChainID returns the ID of the network's chain
+	ChainID() (string, error)
+
 	// BlockIndex returns the current block index/height of the chain
 	BlockIndex() (int64, error)
 

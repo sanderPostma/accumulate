@@ -2,11 +2,14 @@ package node
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path"
 
 	cfg "github.com/AccumulateNetwork/accumulate/config"
+	"github.com/AccumulateNetwork/accumulate/smt/storage"
+	"github.com/AccumulateNetwork/accumulate/smt/storage/memory"
 	tmcfg "github.com/tendermint/tendermint/config"
 	tmlog "github.com/tendermint/tendermint/libs/log"
 	tmos "github.com/tendermint/tendermint/libs/os"
@@ -103,12 +106,24 @@ func Init(opts InitOptions) (err error) {
 	// Generate genesis doc from generated validators
 	genDoc := opts.GenesisDoc
 	if genDoc == nil {
+		db := new(memory.DB)
+		_ = db.InitDB("")
+		_ = db.Put(storage.ComputeKey("ChainID"), []byte(opts.ChainID))
+		state, _ := db.MarshalBinary()
+		state, err := json.Marshal(state)
+		if err != nil {
+			return err
+		}
+		bptRoot := make([]byte, 32)
+
 		genDoc = &types.GenesisDoc{
 			ChainID:         opts.ChainID,
 			GenesisTime:     tmtime.Now(),
 			InitialHeight:   0,
 			Validators:      genVals,
 			ConsensusParams: types.DefaultConsensusParams(),
+			AppState:        state,
+			AppHash:         bptRoot,
 		}
 	}
 

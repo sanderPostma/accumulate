@@ -105,6 +105,20 @@ func (mr *MockChainMockRecorder) EndBlock(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EndBlock", reflect.TypeOf((*MockChain)(nil).EndBlock), arg0)
 }
 
+// InitChain mocks base method.
+func (m *MockChain) InitChain(state []byte) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "InitChain", state)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// InitChain indicates an expected call of InitChain.
+func (mr *MockChainMockRecorder) InitChain(state interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InitChain", reflect.TypeOf((*MockChain)(nil).InitChain), state)
+}
+
 // Query mocks base method.
 func (m *MockChain) Query(arg0 *query.Query) ([]byte, []byte, *protocol.Error) {
 	m.ctrl.T.Helper()
@@ -157,6 +171,21 @@ func (m *MockState) BlockIndex() (int64, error) {
 func (mr *MockStateMockRecorder) BlockIndex() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BlockIndex", reflect.TypeOf((*MockState)(nil).BlockIndex))
+}
+
+// ChainID mocks base method.
+func (m *MockState) ChainID() (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ChainID")
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ChainID indicates an expected call of ChainID.
+func (mr *MockStateMockRecorder) ChainID() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ChainID", reflect.TypeOf((*MockState)(nil).ChainID))
 }
 
 // RootHash mocks base method.
