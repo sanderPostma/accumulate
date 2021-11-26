@@ -301,3 +301,11 @@ TokenIssuer:
     - name: Properties
       type: string
       is-url: true
+
+SyntheticSignTransactions:
+  kind: tx
+  fields:
+    - name: Signature
+      type: slice
+      slice:
+        type: bytes

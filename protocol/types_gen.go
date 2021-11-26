@@ -138,6 +138,10 @@ type SyntheticDepositCredits struct {
 type SyntheticGenesis struct {
 }
 
+type SyntheticSignTransactions struct {
+	Signature [][]byte `json:"signature,omitempty" form:"signature" query:"signature" validate:"required"`
+}
+
 type SyntheticWriteData struct {
 	Data []byte `json:"data,omitempty" form:"data" query:"data" validate:"required"`
 }
@@ -244,6 +248,10 @@ func (*SyntheticDepositCredits) GetType() types.TransactionType {
 }
 
 func (*SyntheticGenesis) GetType() types.TransactionType { return types.TxTypeSyntheticGenesis }
+
+func (*SyntheticSignTransactions) GetType() types.TransactionType {
+	return types.TxTypeSyntheticSignTransactions
+}
 
 func (*SyntheticWriteData) GetType() types.TransactionType { return types.TxTypeSyntheticWriteData }
 
@@ -552,6 +560,21 @@ func (v *SyntheticGenesis) BinarySize() int {
 	var n int
 
 	n += encoding.UvarintBinarySize(types.TxTypeSyntheticGenesis.ID())
+
+	return n
+}
+
+func (v *SyntheticSignTransactions) BinarySize() int {
+	var n int
+
+	n += encoding.UvarintBinarySize(types.TxTypeSyntheticSignTransactions.ID())
+
+	n += encoding.UvarintBinarySize(uint64(len(v.Signature)))
+
+	for _, v := range v.Signature {
+		n += encoding.BytesBinarySize(v)
+
+	}
 
 	return n
 }
@@ -984,6 +1007,21 @@ func (v *SyntheticGenesis) MarshalBinary() ([]byte, error) {
 	var buffer bytes.Buffer
 
 	buffer.Write(encoding.UvarintMarshalBinary(types.TxTypeSyntheticGenesis.ID()))
+
+	return buffer.Bytes(), nil
+}
+
+func (v *SyntheticSignTransactions) MarshalBinary() ([]byte, error) {
+	var buffer bytes.Buffer
+
+	buffer.Write(encoding.UvarintMarshalBinary(types.TxTypeSyntheticSignTransactions.ID()))
+
+	buffer.Write(encoding.UvarintMarshalBinary(uint64(len(v.Signature))))
+	for i, v := range v.Signature {
+		_ = i
+		buffer.Write(encoding.BytesMarshalBinary(v))
+
+	}
 
 	return buffer.Bytes(), nil
 }
@@ -1690,6 +1728,37 @@ func (v *SyntheticGenesis) UnmarshalBinary(data []byte) error {
 	return nil
 }
 
+func (v *SyntheticSignTransactions) UnmarshalBinary(data []byte) error {
+	typ := types.TxTypeSyntheticSignTransactions
+	if v, err := encoding.UvarintUnmarshalBinary(data); err != nil {
+		return fmt.Errorf("error decoding TX type: %w", err)
+	} else if v != uint64(typ) {
+		return fmt.Errorf("invalid TX type: want %v, got %v", typ, types.TransactionType(v))
+	}
+	data = data[encoding.UvarintBinarySize(uint64(typ)):]
+
+	var lenSignature uint64
+	if x, err := encoding.UvarintUnmarshalBinary(data); err != nil {
+		return fmt.Errorf("error decoding Signature: %w", err)
+	} else {
+		lenSignature = x
+	}
+	data = data[encoding.UvarintBinarySize(lenSignature):]
+
+	v.Signature = make([][]byte, lenSignature)
+	for i := range v.Signature {
+		if x, err := encoding.BytesUnmarshalBinary(data); err != nil {
+			return fmt.Errorf("error decoding Signature[%d]: %w", i, err)
+		} else {
+			v.Signature[i] = x
+		}
+		data = data[encoding.BytesBinarySize(v.Signature[i]):]
+
+	}
+
+	return nil
+}
+
 func (v *SyntheticWriteData) UnmarshalBinary(data []byte) error {
 	typ := types.TxTypeSyntheticWriteData
 	if v, err := encoding.UvarintUnmarshalBinary(data); err != nil {
@@ -2018,6 +2087,17 @@ func (v *SyntheticDepositCredits) MarshalJSON() ([]byte, error) {
 	return json.Marshal(&u)
 }
 
+func (v *SyntheticSignTransactions) MarshalJSON() ([]byte, error) {
+	u := struct {
+		Signature []*string `json:"signature,omitempty"`
+	}{}
+	u.Signature = make([]*string, len(v.Signature))
+	for i, x := range v.Signature {
+		u.Signature[i] = encoding.BytesToJSON(x)
+	}
+	return json.Marshal(&u)
+}
+
 func (v *SyntheticWriteData) MarshalJSON() ([]byte, error) {
 	u := struct {
 		Data *string `json:"data,omitempty"`
@@ -2256,6 +2336,24 @@ func (v *SyntheticDepositCredits) UnmarshalJSON(data []byte) error {
 		v.Cause = x
 	}
 	v.Amount = u.Amount
+	return nil
+}
+
+func (v *SyntheticSignTransactions) UnmarshalJSON(data []byte) error {
+	u := struct {
+		Signature []*string `json:"signature,omitempty"`
+	}{}
+	if err := json.Unmarshal(data, &u); err != nil {
+		return err
+	}
+	v.Signature = make([][]byte, len(u.Signature))
+	for i, x := range u.Signature {
+		if x, err := encoding.BytesFromJSON(x); err != nil {
+			return fmt.Errorf("error decoding Signature[%d]: %w", i, err)
+		} else {
+			v.Signature[i] = x
+		}
+	}
 	return nil
 }
 

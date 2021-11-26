@@ -2,6 +2,7 @@ package chain
 
 import (
 	"bytes"
+	"context"
 	"crypto/ed25519"
 	"crypto/sha256"
 	"encoding/json"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/AccumulateNetwork/accumulate/internal/abci"
 	accapi "github.com/AccumulateNetwork/accumulate/internal/api"
+	apiv2 "github.com/AccumulateNetwork/accumulate/internal/api/v2"
 	"github.com/AccumulateNetwork/accumulate/protocol"
 	"github.com/AccumulateNetwork/accumulate/smt/common"
 	"github.com/AccumulateNetwork/accumulate/smt/storage"
@@ -27,6 +29,7 @@ type Executor struct {
 	db        *state.StateDB
 	key       ed25519.PrivateKey
 	query     *accapi.Query
+	local     apiv2.ABCIBroadcastClient
 	executors map[types.TxType]TxExecutor
 
 	wg      *sync.WaitGroup
@@ -40,7 +43,7 @@ type Executor struct {
 
 var _ abci.Chain = (*Executor)(nil)
 
-func NewExecutor(query *accapi.Query, db *state.StateDB, key ed25519.PrivateKey, executors ...TxExecutor) (*Executor, error) {
+func NewExecutor(query *accapi.Query, local apiv2.ABCIBroadcastClient, db *state.StateDB, key ed25519.PrivateKey, executors ...TxExecutor) (*Executor, error) {
 	m := new(Executor)
 	m.db = db
 	m.executors = map[types.TxType]TxExecutor{}
@@ -48,6 +51,7 @@ func NewExecutor(query *accapi.Query, db *state.StateDB, key ed25519.PrivateKey,
 	m.wg = new(sync.WaitGroup)
 	m.mu = new(sync.Mutex)
 	m.query = query
+	m.local = local
 
 	for _, x := range executors {
 		if _, ok := m.executors[x.Type()]; ok {
@@ -91,6 +95,47 @@ func (m *Executor) BeginBlock(req abci.BeginBlockRequest) {
 	m.time = req.Time
 	m.chainWG = make(map[uint64]*sync.WaitGroup, chainWGSize)
 	m.dbTx = m.db.Begin()
+
+	if !m.leader {
+		return
+	}
+
+	head, count, err := m.db.GetAnchorHead()
+	if err != nil {
+		panic(err)
+	}
+
+	count = count - head.PreviousHeight - int64(len(head.Chains)) - 1
+	if count == 0 {
+		return
+	}
+
+	body, err := new(protocol.SyntheticSignTransactions).MarshalBinary()
+	if err != nil {
+		panic(err)
+	}
+
+	tx := new(transactions.GenTransaction)
+	tx.SigInfo = new(transactions.SignatureInfo)
+	tx.SigInfo.URL = "bvn"
+	tx.SigInfo.MSHeight = 1
+	tx.SigInfo.PriorityIdx = 0
+	tx.Transaction = body
+
+	ed := new(transactions.ED25519Sig)
+	tx.Signature = append(tx.Signature, ed)
+	ed.PublicKey = m.key[32:]
+	err = ed.Sign(tx.SigInfo.Nonce, m.key, tx.TransactionHash())
+	if err != nil {
+		panic(err)
+	}
+
+	data, err := tx.Marshal()
+	if err != nil {
+		panic(err)
+	}
+
+	go m.local.BroadcastTxAsync(context.Background(), data)
 }
 
 func (m *Executor) check(tx *transactions.GenTransaction) (*StateManager, error) {
@@ -469,16 +514,16 @@ func (m *Executor) submitSyntheticTx(parentTxId types.Bytes, st *StateManager) (
 			}
 
 			tx.Signature = append(tx.Signature, ed)
-			ti, err := m.query.BroadcastTx(tx, nil)
-			if err != nil {
-				return nil, err
-			}
+			// ti, err := m.query.BroadcastTx(tx, nil)
+			// if err != nil {
+			// 	return nil, err
+			// }
 
 			tmRef[i] = new(protocol.TxSynthRef)
 			tmRef[i].Type = uint64(tx.TransactionType())
 			tmRef[i].Url = tx.SigInfo.URL
 			copy(tmRef[i].Hash[:], tx.TransactionHash())
-			copy(tmRef[i].TxRef[:], ti.ReferenceId)
+			// copy(tmRef[i].TxRef[:], ti.ReferenceId)
 		}
 	}
 
