@@ -64,7 +64,7 @@ func NodeInitOptsForNetwork(network *networks.Subnet) (node.InitOptions, error) 
 	}, nil
 }
 
-func NewBVCNode(dir string, memDB bool, relayTo []string, newZL func(string) zerolog.Logger, cleanup func(func())) (*node.Node, *state.StateDB, *privval.FilePV, error) {
+func NewBVCNode(dir string, relayTo []string, newZL func(string) zerolog.Logger, cleanup func(func())) (*node.Node, *state.StateDB, *privval.FilePV, error) {
 	cfg, err := cfg.Load(dir)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("failed to load config: %v", err)
@@ -73,7 +73,7 @@ func NewBVCNode(dir string, memDB bool, relayTo []string, newZL func(string) zer
 	dbPath := filepath.Join(cfg.RootDir, "valacc.db")
 	//ToDo: FIX:::  bvcId := sha256.Sum256([]byte(cfg.Instrumentation.Namespace))
 	sdb := new(state.StateDB)
-	err = sdb.Open(dbPath, memDB, true)
+	err = sdb.Open(dbPath, true)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("failed to open database %s: %v", dbPath, err)
 	}

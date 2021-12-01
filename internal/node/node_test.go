@@ -48,7 +48,7 @@ func TestNodeLifecycle(t *testing.T) {
 		return logging.NewTestZeroLogger(t, s)
 	}
 
-	node, db, _, err := acctesting.NewBVCNode(nodeDir, false, nil, newLogger, t.Cleanup)
+	node, db, _, err := acctesting.NewBVCNode(nodeDir, nil, newLogger, t.Cleanup)
 	require.NoError(t, err)          // Initialize the node
 	require.NoError(t, node.Start()) // Start the node
 	require.NoError(t, node.Stop())  // Stop the node
@@ -103,13 +103,13 @@ func TestNodeSetupTwiceWithPrometheus(t *testing.T) {
 				return logging.NewTestZeroLogger(t, s)
 			}
 
-			require.NoError(t, node.Init(opts))                                                 // Configure
-			nodeDir := filepath.Join(opts.WorkDir, "Node0")                                     //
-			node, _, _, err := acctesting.NewBVCNode(nodeDir, false, nil, newLogger, t.Cleanup) // Initialize
-			require.NoError(t, err)                                                             //
-			require.NoError(t, node.Start())                                                    // Start
-			require.NoError(t, node.Stop())                                                     // Stop
-			node.Wait()                                                                         //
+			require.NoError(t, node.Init(opts))                                          // Configure
+			nodeDir := filepath.Join(opts.WorkDir, "Node0")                              //
+			node, _, _, err := acctesting.NewBVCNode(nodeDir, nil, newLogger, t.Cleanup) // Initialize
+			require.NoError(t, err)                                                      //
+			require.NoError(t, node.Start())                                             // Start
+			require.NoError(t, node.Stop())                                              // Stop
+			node.Wait()                                                                  //
 		})
 	}
 }

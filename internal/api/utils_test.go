@@ -36,16 +36,16 @@ func startBVC(t *testing.T, dir string) (*state.StateDB, *privval.FilePV, *Query
 		return logging.NewTestZeroLogger(t, s)
 	}
 
-	require.NoError(t, node.Init(opts))                                                    // Configure
-	nodeDir := filepath.Join(dir, "Node0")                                                 //
-	cfg, err = config.Load(nodeDir)                                                        // Modify configuration
-	require.NoError(t, err)                                                                //
-	cfg.Accumulate.WebsiteEnabled = false                                                  // Disable the website
-	cfg.Instrumentation.Prometheus = false                                                 // Disable prometheus: https://github.com/tendermint/tendermint/issues/7076
-	require.NoError(t, config.Store(cfg))                                                  //
-	node, sdb, pv, err := acctesting.NewBVCNode(nodeDir, false, nil, newLogger, t.Cleanup) // Initialize
-	require.NoError(t, err)                                                                //
-	require.NoError(t, node.Start())                                                       // Launch
+	require.NoError(t, node.Init(opts))                                             // Configure
+	nodeDir := filepath.Join(dir, "Node0")                                          //
+	cfg, err = config.Load(nodeDir)                                                 // Modify configuration
+	require.NoError(t, err)                                                         //
+	cfg.Accumulate.WebsiteEnabled = false                                           // Disable the website
+	cfg.Instrumentation.Prometheus = false                                          // Disable prometheus: https://github.com/tendermint/tendermint/issues/7076
+	require.NoError(t, config.Store(cfg))                                           //
+	node, sdb, pv, err := acctesting.NewBVCNode(nodeDir, nil, newLogger, t.Cleanup) // Initialize
+	require.NoError(t, err)                                                         //
+	require.NoError(t, node.Start())                                                // Launch
 
 	t.Cleanup(func() { require.NoError(t, node.Stop()) })
 
